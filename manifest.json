@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messwarte — Stats Dashboard</title>
+<meta name="theme-color" content="#0A0D0C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Messwarte">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0D0C;
+    --panel:#101513;
+    --panel-2:#141A18;
+    --grid:#1E2926;
+    --hair:#26332F;
+    --scope:#4CFF9E;
+    --scope-dim:#1F5B41;
+    --amber:#FFB020;
+    --amber-dim:#5C3E10;
+    --red:#FF5D5D;
+    --text:#E7EDEB;
+    --text-mute:#7C8A87;
+    --text-faint:#4B5754;
+    --font-mono:'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+    --font-sans:'IBM Plex Sans', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-sans);padding:24px;min-height:100vh;}
+  .wrap{max-width:960px;margin:0 auto;}
+
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--hair);padding-bottom:14px;margin-bottom:20px;}
+  .brand{display:flex;flex-direction:column;gap:2px;}
+  .brand .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;color:var(--scope);text-transform:uppercase;}
+  .brand h1{font-size:22px;font-weight:600;margin:0;}
+  .clock{font-family:var(--font-mono);font-size:13px;color:var(--text-mute);text-align:right;line-height:1.5;}
+  .clock .dot{color:var(--scope);}
+
+  .panel{background:var(--panel);border:1px solid var(--hair);border-radius:3px;padding:18px 20px;margin-bottom:16px;}
+  .panel-label{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;color:var(--text-mute);text-transform:uppercase;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  .panel-label .tag{color:var(--scope);}
+
+  .hero{display:flex;gap:24px;align-items:stretch;}
+  .hero-readout{flex:0 0 180px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--hair);padding-right:20px;}
+  .hero-readout .num{font-family:var(--font-mono);font-size:56px;font-weight:700;line-height:1;color:var(--scope);}
+  .hero-readout .num sub{font-size:20px;color:var(--text-mute);font-weight:400;}
+  .hero-readout .cap{font-family:var(--font-mono);font-size:11px;color:var(--text-mute);margin-top:8px;letter-spacing:0.08em;}
+  .hero-scope{flex:1;position:relative;min-height:120px;}
+
+  .dials{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .dial-card{background:var(--panel);border:1px solid var(--hair);border-radius:3px;padding:14px 14px 16px;text-align:center;}
+  .dial-card .name{font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.14em;color:var(--text-mute);text-transform:uppercase;margin-bottom:6px;}
+  .dial-card .sub{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);margin-top:6px;}
+  .dial-card .sub b{color:var(--text);font-weight:500;}
+
+  .habits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .habit-card{background:var(--panel);border:1px solid var(--hair);border-radius:3px;padding:14px;}
+  .habit-card .name{font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.14em;color:var(--text-mute);text-transform:uppercase;margin-bottom:10px;}
+  .weekstrip{display:flex;gap:5px;margin-bottom:8px;}
+  .wcell{flex:1;height:22px;border-radius:2px;background:var(--panel-2);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;color:var(--text-faint);}
+  .wcell.sched{border-color:var(--scope-dim);}
+  .wcell.done{background:var(--scope-dim);color:var(--scope);border-color:var(--scope);}
+  .habit-sub{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);}
+  .habit-sub b{color:var(--text);font-weight:500;}
+  .progressbar{display:flex;gap:4px;margin:8px 0;}
+  .pseg{flex:1;height:8px;border-radius:2px;background:var(--panel-2);border:1px solid var(--hair);}
+  .pseg.on{background:var(--scope);border-color:var(--scope);}
+
+  .tabs{display:flex;gap:2px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab{font-family:var(--font-mono);font-size:11.5px;letter-spacing:0.05em;background:var(--panel-2);border:1px solid var(--hair);color:var(--text-mute);padding:8px 14px;cursor:pointer;text-transform:uppercase;}
+  .tab.active{color:var(--scope);border-color:var(--scope-dim);background:#0E1C16;}
+
+  .field-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px;}
+  .field label{font-family:var(--font-mono);font-size:10.5px;color:var(--text-mute);letter-spacing:0.08em;text-transform:uppercase;}
+  .field input[type=number], .field input[type=date], .field input[type=text]{
+    background:var(--panel-2);border:1px solid var(--hair);color:var(--text);
+    font-family:var(--font-mono);font-size:14px;padding:9px 10px;border-radius:2px;width:100%;
+  }
+  .field input[type=range]{width:100%;accent-color:var(--scope);}
+  .checkline{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .checkline input{width:18px;height:18px;accent-color:var(--scope);}
+  .checkline label{font-family:var(--font-mono);font-size:12.5px;color:var(--text);}
+
+  .exrow{display:flex;gap:10px;margin-bottom:8px;align-items:center;}
+  .exrow input[type=text]{flex:2;}
+  .exrow input[type=number]{flex:1;}
+  .exrow .rm{background:transparent;border:1px solid var(--hair);color:var(--text-mute);cursor:pointer;font-family:var(--font-mono);font-size:14px;padding:8px 12px;border-radius:2px;}
+  .exrow .rm:hover{border-color:var(--red);color:var(--red);}
+  .addex{font-family:var(--font-mono);font-size:11.5px;color:var(--scope);background:transparent;border:1px dashed var(--scope-dim);padding:8px 14px;cursor:pointer;border-radius:2px;margin-bottom:14px;}
+
+  .btn{font-family:var(--font-mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;background:var(--scope-dim);color:var(--scope);border:1px solid var(--scope);padding:10px 18px;border-radius:2px;cursor:pointer;}
+  .btn:hover{background:#173D2C;}
+  .btn.ghost{background:transparent;color:var(--text-mute);border-color:var(--hair);}
+  .btn.ghost:hover{border-color:var(--red);color:var(--red);}
+
+  .trendlist{display:flex;flex-direction:column;gap:8px;}
+  .trenditem{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12.5px;border-bottom:1px solid #182220;padding-bottom:8px;}
+  .trenditem .exname{color:var(--text);text-transform:capitalize;}
+  .trenditem .exval{color:var(--text-mute);}
+  .arrow-up{color:var(--scope);}
+  .arrow-down{color:var(--red);}
+  .arrow-flat{color:var(--text-mute);}
+
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:12px;min-width:640px;}
+  th{text-align:left;color:var(--text-mute);font-weight:400;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:0 8px 8px 0;border-bottom:1px solid var(--hair);white-space:nowrap;}
+  td{padding:7px 8px 7px 0;border-bottom:1px solid #182220;color:var(--text);white-space:nowrap;}
+  td.num{text-align:right;}
+
+  .status{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-top:6px;}
+  .footer-note{font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);text-align:center;margin-top:20px;letter-spacing:0.06em;}
+  .assumption{font-family:var(--font-mono);font-size:10px;color:var(--amber);margin-top:4px;}
+  @media (max-width:640px){
+    .hero{flex-direction:column;}
+    .hero-readout{border-right:none;border-bottom:1px solid var(--hair);padding-right:0;padding-bottom:14px;}
+    .dials{grid-template-columns:1fr;}
+    .habits{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="eyebrow">Messwarte // Personal Performance Monitor</span>
+      <h1>Dein Stats-Dashboard</h1>
+    </div>
+    <div class="clock" id="clockBox">— <span class="dot">●</span> lädt…</div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-label"><span>Tagesscore <span class="tag">// heute</span></span><span id="statusLine">initialisiere…</span></p>
+    <div class="hero">
+      <div class="hero-readout">
+        <div class="num" id="compositeNum">–<sub>/100</sub></div>
+        <div class="cap" id="compositeCap">noch keine daten</div>
+      </div>
+      <div class="hero-scope">
+        <svg id="scopeSvg" viewBox="0 0 600 130" width="100%" height="130" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="dials" id="dialsBox"></div>
+
+  <div class="habits" id="habitsBox" style="margin-top:14px;"></div>
+
+  <div class="panel" style="margin-top:16px;">
+    <p class="panel-label"><span>Trend Training <span class="tag">// wiederholungen pro übung</span></span></p>
+    <div class="trendlist" id="trendBox"><div class="habit-sub">noch keine Übungen geloggt</div></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <p class="panel-label"><span>Eintrag loggen</span>
+      <input type="date" id="logDate" style="background:var(--panel-2);border:1px solid var(--hair);color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 8px;border-radius:2px;">
+    </p>
+    <div class="tabs" id="tabsBox">
+      <div class="tab active" data-cat="training">Training</div>
+      <div class="tab" data-cat="nutrition">Ernährung</div>
+      <div class="tab" data-cat="islam">Islam</div>
+      <div class="tab" data-cat="quran">Quran</div>
+      <div class="tab" data-cat="learning">Lernen</div>
+      <div class="tab" data-cat="reading">Lesen</div>
+    </div>
+
+    <div id="formTraining">
+      <div class="checkline">
+        <input type="checkbox" id="trainDone">
+        <label for="trainDone">Beim Ringen-Training gewesen</label>
+      </div>
+      <div id="exList"></div>
+      <button class="addex" id="addExBtn">+ Übung hinzufügen</button>
+    </div>
+
+    <div id="formNutrition" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Kalorien (kcal) — Ziel 2200</label><input type="number" id="calInput" min="0" step="10" placeholder="2200"></div>
+        <div class="field"><label>Protein (g) — Ziel 130</label><input type="number" id="proteinInput" min="0" step="1" placeholder="130"></div>
+      </div>
+    </div>
+
+    <div id="formIslam" style="display:none;">
+      <div class="checkline">
+        <input type="checkbox" id="islamDone">
+        <label for="islamDone">AMAU-Academy-Vorlesung geschaut</label>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Dauer (min) — Ziel 20</label><input type="number" id="islamMinutes" min="0" step="5" placeholder="20"></div>
+      </div>
+    </div>
+
+    <div id="formQuran" style="display:none;">
+      <div class="checkline">
+        <input type="checkbox" id="quranDone">
+        <label for="quranDone">Heute mindestens eine Seite Quran gelesen</label>
+      </div>
+    </div>
+
+    <div id="formLearning" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Lernzeit (Std.) — Ziel 8</label><input type="number" id="hoursInput" min="0" step="0.25" placeholder="8"></div>
+      </div>
+    </div>
+
+    <div id="formReading" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Gelesene Seiten — Richtwert 10</label><input type="number" id="pagesInput" min="0" step="1" placeholder="10"></div>
+      </div>
+      <div class="assumption">Richtwert 10 Seiten/Tag angenommen, da kein fester Wert genannt wurde — im Code unter readingGoalPages anpassbar.</div>
+    </div>
+
+    <button class="btn" id="saveBtn" style="margin-top:10px;">Eintrag speichern</button>
+    <div class="status" id="saveStatus"></div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <p class="panel-label"><span>Verlauf <span class="tag">// letzte 7 tage</span></span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="btn ghost" id="exportBtn" style="padding:6px 12px;font-size:10.5px;">Export (JSON)</span>
+        <label class="btn ghost" for="importFile" style="padding:6px 12px;font-size:10.5px;cursor:pointer;">Import (JSON)</label>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <span class="btn ghost" id="resetBtn" style="padding:6px 12px;font-size:10.5px;">Alle daten löschen</span>
+      </span>
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Datum</th><th>Training</th><th>Ernährung</th><th>Islam</th><th>Quran</th><th>Lernen</th><th>Lesen</th><th style="text-align:right;">Score</th></tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer-note">Daten werden dauerhaft in deinem persönlichen Speicher abgelegt · nur für dich sichtbar</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'dashboard-data-v2';
+const DEFAULT_SETTINGS = {
+  calorieTarget: 2200,
+  proteinTarget: 130,
+  trainingDays: [1,3,5],
+  islamWeeklyGoalSessions: 3,
+  islamSessionMinutes: 20,
+  learningGoalHours: 8,
+  readingGoalPages: 10
+};
+let DATA = { entries: {}, settings: { ...DEFAULT_SETTINGS } };
+let activeTab = 'training';
+let exerciseRows = [];
+const DAY_LABELS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtDateLabel(iso){ const d = new Date(iso+'T00:00:00'); return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}); }
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function isoWeekday(iso){ const d = new Date(iso+'T00:00:00'); const jsDay = d.getDay(); return jsDay===0?6:jsDay-1; }
+
+function isScheduledTrainingDay(iso){
+  const jsDay = new Date(iso+'T00:00:00').getDay();
+  return DATA.settings.trainingDays.includes(jsDay);
+}
+function trainingScore(iso, e){
+  if (!isScheduledTrainingDay(iso)) return null;
+  if (!e || !e.training) return 0;
+  return e.training.attended ? 100 : 0;
+}
+function nutritionScore(e){
+  if (!e || !e.nutrition || (e.nutrition.calories==null && e.nutrition.protein==null)) return null;
+  let score = 100;
+  const s = DATA.settings;
+  if (e.nutrition.calories != null){
+    const diff = Math.abs(e.nutrition.calories - s.calorieTarget) / s.calorieTarget;
+    score -= clamp(diff*140, 0, 60);
+  }
+  if (e.nutrition.protein != null){
+    const ratio = e.nutrition.protein / s.proteinTarget;
+    if (ratio < 1) score -= clamp((1-ratio)*50, 0, 40);
+  }
+  return Math.round(clamp(score,0,100));
+}
+function islamScore(e){
+  if (!e || !e.islam) return null;
+  if (!e.islam.watched) return 0;
+  const mins = e.islam.minutes ?? 0;
+  return Math.round(clamp((mins/DATA.settings.islamSessionMinutes)*100, 0, 100));
+}
+function quranScore(e){
+  if (!e || !e.quran) return null;
+  return e.quran.read ? 100 : 0;
+}
+function learningScore(e){
+  if (!e || !e.learning) return null;
+  return Math.round(clamp((e.learning.hours/DATA.settings.learningGoalHours)*100, 0, 100));
+}
+function readingScore(e){
+  if (!e || !e.reading) return null;
+  return Math.round(clamp((e.reading.pages/DATA.settings.readingGoalPages)*100, 0, 100));
+}
+
+function scoresForDate(iso){
+  const e = DATA.entries[iso] || {};
+  const t = trainingScore(iso, e);
+  const n = nutritionScore(e);
+  const isl = islamScore(e);
+  const q = quranScore(e);
+  const l = learningScore(e);
+  const r = readingScore(e);
+  const parts = [t,n,isl,q,l,r].filter(v => v != null);
+  const composite = parts.length ? Math.round(parts.reduce((a,b)=>a+b,0)/parts.length) : null;
+  return { training:t, nutrition:n, islam:isl, quran:q, learning:l, reading:r, composite };
+}
+
+function lastNDates(n){
+  const out=[]; const d=new Date();
+  for (let i=n-1;i>=0;i--){ const dd=new Date(d); dd.setDate(d.getDate()-i); out.push(dd.toISOString().slice(0,10)); }
+  return out;
+}
+function currentWeekDates(){
+  const d = new Date();
+  const wd = isoWeekday(todayStr());
+  const monday = new Date(d);
+  monday.setDate(d.getDate()-wd);
+  const out=[];
+  for (let i=0;i<7;i++){ const dd=new Date(monday); dd.setDate(monday.getDate()+i); out.push(dd.toISOString().slice(0,10)); }
+  return out;
+}
+
+function computeStreak(pred){
+  let streak=0; let d=new Date();
+  while(true){
+    const iso=d.toISOString().slice(0,10);
+    if (!pred(iso)) break;
+    streak++; d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+function drawGauge(container, label, score, sub){
+  const has = score != null;
+  const val = has ? score : 0;
+  const angle = -120 + (val/100)*240;
+  const color = !has ? 'var(--text-faint)' : score>=70 ? 'var(--scope)' : score>=40 ? 'var(--amber)' : 'var(--red)';
+  const cx=60, cy=64, r=46;
+  const startA=-120, endA=120;
+  const toXY=(a)=>{ const rad=(a-90)*Math.PI/180; return [cx+r*Math.cos(rad), cy+r*Math.sin(rad)]; };
+  const [sx,sy]=toXY(startA); const [ex,ey]=toXY(endA); const [nx,ny]=toXY(angle);
+  let ticks='';
+  for (let i=0;i<=8;i++){
+    const a=startA+(i/8)*(endA-startA);
+    const [tx1,ty1]=toXY(a);
+    const rad=(a-90)*Math.PI/180;
+    const tx2=cx+(r-7)*Math.cos(rad), ty2=cy+(r-7)*Math.sin(rad);
+    ticks += `<line x1="${tx1}" y1="${ty1}" x2="${tx2}" y2="${ty2}" stroke="#2A3733" stroke-width="1.5"/>`;
+  }
+  container.innerHTML = `
+    <div class="name">${label}</div>
+    <svg viewBox="0 0 120 100" width="120" height="100" style="display:block;margin:0 auto;">
+      <path d="M ${sx} ${sy} A ${r} ${r} 0 1 1 ${ex} ${ey}" fill="none" stroke="#1C2724" stroke-width="6" stroke-linecap="round"/>
+      ${ticks}
+      <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${has?color:'#3A4642'}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="4.5" fill="${has?color:'#3A4642'}"/>
+      <text x="${cx}" y="${cy+30}" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700" fill="${has?'#E7EDEB':'#4B5754'}">${has?val:'–'}</text>
+    </svg>
+    <div class="sub">${sub}</div>
+  `;
+}
+
+function drawScope(svg, series){
+  const w=600,h=130,pad=8,max=100;
+  const pts = series.map((v,i)=>{
+    const x = pad + (i/(series.length-1))*(w-2*pad);
+    const y = h-pad - ((v??0)/max)*(h-2*pad);
+    return [x,y,v];
+  });
+  let grid='';
+  for (let gy=0; gy<=4; gy++){ const y=pad+gy*(h-2*pad)/4; grid += `<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="#1A2320" stroke-width="1"/>`; }
+  for (let gx=0; gx<=6; gx++){ const x=pad+gx*(w-2*pad)/6; grid += `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="#161E1B" stroke-width="1"/>`; }
+  const path = pts.filter(p=>p[2]!=null).map((p,i)=>`${i===0?'M':'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const dots = pts.filter(p=>p[2]!=null).map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="#4CFF9E"/>`).join('');
+  svg.innerHTML = `${grid}<path d="${path}" fill="none" stroke="#4CFF9E" stroke-width="2"/>${dots}`;
+}
+
+function drawWeekstrip(container, dates, valueFn, schedFn){
+  container.innerHTML = dates.map(iso => {
+    const done = valueFn(iso);
+    const sched = schedFn ? schedFn(iso) : true;
+    const wd = isoWeekday(iso);
+    const cls = ['wcell']; if (sched) cls.push('sched'); if (done) cls.push('done');
+    return `<div class="${cls.join(' ')}">${DAY_LABELS[wd]}</div>`;
+  }).join('');
+}
+
+function renderClock(){
+  const box = document.getElementById('clockBox');
+  const now = new Date();
+  const date = now.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+  box.innerHTML = `${date} <span class="dot">●</span> aufgezeichnet`;
+}
+
+function buildExerciseHistory(){
+  const map = {};
+  Object.keys(DATA.entries).sort().forEach(date => {
+    const ex = DATA.entries[date].training && DATA.entries[date].training.exercises;
+    if (!ex) return;
+    ex.forEach(item => {
+      const key = (item.name||'').trim().toLowerCase();
+      if (!key) return;
+      if (!map[key]) map[key] = { name: item.name.trim(), points: [] };
+      map[key].points.push({ date, reps: Number(item.reps)||0 });
+    });
+  });
+  return map;
+}
+
+function renderTrend(){
+  const map = buildExerciseHistory();
+  const keys = Object.keys(map);
+  const box = document.getElementById('trendBox');
+  if (!keys.length){ box.innerHTML = '<div class="habit-sub">noch keine Übungen geloggt</div>'; return; }
+  box.innerHTML = keys.map(k => {
+    const pts = map[k].points;
+    const latest = pts[pts.length-1];
+    const prev = pts.length>1 ? pts[pts.length-2] : null;
+    let arrow = '<span class="arrow-flat">→</span>';
+    let deltaTxt = 'erste Eintragung';
+    if (prev){
+      const delta = latest.reps - prev.reps;
+      const pct = prev.reps ? Math.round((delta/prev.reps)*100) : 0;
+      if (delta > 0){ arrow = `<span class="arrow-up">↑ +${pct}%</span>`; }
+      else if (delta < 0){ arrow = `<span class="arrow-down">↓ ${pct}%</span>`; }
+      else { arrow = '<span class="arrow-flat">→ 0%</span>'; }
+      deltaTxt = `${prev.reps} → ${latest.reps} Wdh`;
+    } else {
+      deltaTxt = `${latest.reps} Wdh`;
+    }
+    return `<div class="trenditem"><span class="exname">${map[k].name}</span><span class="exval">${deltaTxt}</span>${arrow}</div>`;
+  }).join('');
+}
+
+function renderAll(){
+  const today = todayStr();
+  const s = scoresForDate(today);
+
+  document.getElementById('compositeNum').innerHTML = s.composite != null ? `${s.composite}<sub>/100</sub>` : `–<sub>/100</sub>`;
+  document.getElementById('compositeCap').textContent = s.composite != null
+    ? (s.composite>=70 ? 'im grünen bereich' : s.composite>=40 ? 'ausbaufähig' : 'niedrig — heute noch loggen')
+    : 'für heute noch nichts geloggt';
+  document.getElementById('statusLine').textContent = today;
+
+  const series = lastNDates(14).map(d => scoresForDate(d).composite);
+  drawScope(document.getElementById('scopeSvg'), series);
+
+  const dialsBox = document.getElementById('dialsBox');
+  dialsBox.innerHTML = '<div class="dial-card" id="dNutrition"></div><div class="dial-card" id="dLearning"></div><div class="dial-card" id="dReading"></div>';
+  const eToday = DATA.entries[today] || {};
+  drawGauge(document.getElementById('dNutrition'), 'Ernährung', s.nutrition,
+    eToday.nutrition ? `<b>${eToday.nutrition.calories ?? '–'}</b> / ${DATA.settings.calorieTarget} kcal` : `Ziel: ${DATA.settings.calorieTarget} kcal / ${DATA.settings.proteinTarget}g Protein`);
+  drawGauge(document.getElementById('dLearning'), 'Lernen', s.learning,
+    eToday.learning ? `<b>${eToday.learning.hours}h</b> / ${DATA.settings.learningGoalHours}h` : `Ziel: ${DATA.settings.learningGoalHours}h/tag`);
+  drawGauge(document.getElementById('dReading'), 'Lesen', s.reading,
+    eToday.reading ? `<b>${eToday.reading.pages}</b> / ${DATA.settings.readingGoalPages} seiten` : `Richtwert: ${DATA.settings.readingGoalPages} seiten/tag`);
+
+  const habitsBox = document.getElementById('habitsBox');
+  habitsBox.innerHTML = `
+    <div class="habit-card"><div class="name">Training (Ringen)</div><div class="weekstrip" id="wsTraining"></div><div class="habit-sub">Anwesenheit an geplanten Tagen: <b id="trainAdh"></b></div></div>
+    <div class="habit-card"><div class="name">Islam · AMAU Academy</div><div class="progressbar" id="pbIslam"></div><div class="habit-sub" id="islamSub"></div></div>
+    <div class="habit-card"><div class="name">Quran</div><div class="weekstrip" id="wsQuran"></div><div class="habit-sub">Streak: <b id="quranStreak"></b></div></div>
+  `;
+
+  const week = currentWeekDates();
+  drawWeekstrip(document.getElementById('wsTraining'), week,
+    (iso) => DATA.entries[iso] && DATA.entries[iso].training && DATA.entries[iso].training.attended,
+    (iso) => isScheduledTrainingDay(iso));
+  const schedDaysPassed = week.filter(iso => isScheduledTrainingDay(iso) && iso <= today);
+  const attendedCount = schedDaysPassed.filter(iso => DATA.entries[iso] && DATA.entries[iso].training && DATA.entries[iso].training.attended).length;
+  document.getElementById('trainAdh').textContent = `${attendedCount}/${schedDaysPassed.length || 0}`;
+
+  const islamSessionsThisWeek = week.filter(iso => DATA.entries[iso] && DATA.entries[iso].islam && DATA.entries[iso].islam.watched).length;
+  const pb = document.getElementById('pbIslam');
+  pb.innerHTML = Array.from({length: DATA.settings.islamWeeklyGoalSessions}).map((_,i) =>
+    `<div class="pseg ${i < islamSessionsThisWeek ? 'on' : ''}"></div>`).join('');
+  document.getElementById('islamSub').innerHTML = `<b>${islamSessionsThisWeek}/${DATA.settings.islamWeeklyGoalSessions}</b> Sitzungen diese Woche`;
+
+  drawWeekstrip(document.getElementById('wsQuran'), week,
+    (iso) => DATA.entries[iso] && DATA.entries[iso].quran && DATA.entries[iso].quran.read, null);
+  const qStreak = computeStreak(iso => DATA.entries[iso] && DATA.entries[iso].quran && DATA.entries[iso].quran.read);
+  document.getElementById('quranStreak').textContent = `${qStreak}d`;
+
+  renderTrend();
+
+  const body = document.getElementById('historyBody');
+  const dates = lastNDates(7).reverse();
+  body.innerHTML = dates.map(d => {
+    const sc = scoresForDate(d);
+    const fmt = v => v!=null ? v : '—';
+    return `<tr>
+      <td>${fmtDateLabel(d)}${d===today?' •':''}</td>
+      <td>${fmt(sc.training)}</td>
+      <td>${fmt(sc.nutrition)}</td>
+      <td>${fmt(sc.islam)}</td>
+      <td>${fmt(sc.quran)}</td>
+      <td>${fmt(sc.learning)}</td>
+      <td>${fmt(sc.reading)}</td>
+      <td class="num">${fmt(sc.composite)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderExerciseRows(){
+  const list = document.getElementById('exList');
+  list.innerHTML = exerciseRows.map((row, idx) => `
+    <div class="exrow" data-idx="${idx}">
+      <input type="text" placeholder="Übung (z.B. Kniebeuge)" value="${row.name}" data-field="name">
+      <input type="number" placeholder="Wdh." min="0" step="1" value="${row.reps}" data-field="reps">
+      <button class="rm" data-rm="${idx}">×</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const idx = Number(e.target.closest('.exrow').dataset.idx);
+      exerciseRows[idx][e.target.dataset.field] = e.target.value;
+    });
+  });
+  list.querySelectorAll('.rm').forEach(btn => {
+    btn.addEventListener('click', () => {
+      exerciseRows.splice(Number(btn.dataset.rm), 1);
+      renderExerciseRows();
+    });
+  });
+}
+
+document.getElementById('addExBtn').addEventListener('click', () => {
+  exerciseRows.push({ name:'', reps:'' });
+  renderExerciseRows();
+});
+
+function switchTab(cat){
+  activeTab = cat;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat===cat));
+  ['Training','Nutrition','Islam','Quran','Learning','Reading'].forEach(c => {
+    document.getElementById('form'+c).style.display = c.toLowerCase()===cat ? 'block' : 'none';
+  });
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.cat)));
+
+async function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      const parsed = JSON.parse(raw);
+      DATA = { entries: parsed.entries || {}, settings: { ...DEFAULT_SETTINGS, ...(parsed.settings||{}) } };
+    }
+  } catch(err){
+    DATA = { entries: {}, settings: { ...DEFAULT_SETTINGS } };
+  }
+}
+async function saveData(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA)); return true; }
+  catch(err){ return false; }
+}
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `messwarte-export-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try{
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!parsed.entries) throw new Error('ungültiges Format');
+    DATA = { entries: parsed.entries || {}, settings: { ...DEFAULT_SETTINGS, ...(parsed.settings||{}) } };
+    await saveData();
+    renderAll();
+    document.getElementById('saveStatus').textContent = 'Import erfolgreich';
+  } catch(err){
+    document.getElementById('saveStatus').textContent = 'Import fehlgeschlagen — Datei prüfen';
+  }
+  e.target.value = '';
+});
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const dateInput = document.getElementById('logDate').value || todayStr();
+  if (!DATA.entries[dateInput]) DATA.entries[dateInput] = {};
+  const entry = DATA.entries[dateInput];
+
+  if (activeTab === 'training'){
+    entry.training = {
+      attended: document.getElementById('trainDone').checked,
+      exercises: exerciseRows.filter(r => r.name && r.name.trim()).map(r => ({ name: r.name.trim(), reps: Number(r.reps)||0 }))
+    };
+  } else if (activeTab === 'nutrition'){
+    const cal = document.getElementById('calInput').value;
+    const prot = document.getElementById('proteinInput').value;
+    entry.nutrition = { calories: cal!=='' ? Number(cal) : null, protein: prot!=='' ? Number(prot) : null };
+  } else if (activeTab === 'islam'){
+    entry.islam = { watched: document.getElementById('islamDone').checked, minutes: Number(document.getElementById('islamMinutes').value)||0 };
+  } else if (activeTab === 'quran'){
+    entry.quran = { read: document.getElementById('quranDone').checked };
+  } else if (activeTab === 'learning'){
+    const hrs = document.getElementById('hoursInput').value;
+    entry.learning = { hours: hrs!=='' ? Number(hrs) : 0 };
+  } else if (activeTab === 'reading'){
+    const pages = document.getElementById('pagesInput').value;
+    entry.reading = { pages: pages!=='' ? Number(pages) : 0 };
+  }
+
+  const statusEl = document.getElementById('saveStatus');
+  statusEl.textContent = 'speichere…';
+  const ok = await saveData();
+  statusEl.textContent = ok ? `gespeichert für ${dateInput}` : 'speichern fehlgeschlagen — bitte erneut versuchen';
+  if (activeTab === 'training'){ exerciseRows = []; renderExerciseRows(); document.getElementById('trainDone').checked = false; }
+  renderAll();
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('Wirklich alle aufgezeichneten Daten löschen? Das kann nicht rückgängig gemacht werden.')) return;
+  DATA = { entries: {}, settings: { ...DEFAULT_SETTINGS } };
+  await saveData();
+  renderAll();
+});
+
+(async function init(){
+  document.getElementById('logDate').value = todayStr();
+  renderExerciseRows();
+  renderClock();
+  setInterval(renderClock, 30000);
+  await loadData();
+  renderAll();
+})();
+</script>
+</body>
+</html>
